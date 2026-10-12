@@ -49,7 +49,7 @@ export function TrendChart({ months, data, enabled }: Props) {
       showSymbol: false,
       symbol: 'circle',
       symbolSize: 6,
-      connectNulls: false,
+      connectNulls: true,
       lineStyle: { width: 2 },
       itemStyle: { color: PALETTE[idx % PALETTE.length] },
       emphasis: { focus: 'series' as const },
