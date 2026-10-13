@@ -1,9 +1,9 @@
-import { METRIC_CONFIG, type MetricKey } from '../../config/metrics';
+import { DETAIL_METRIC_ORDER, METRIC_CONFIG } from '../../config/metrics';
 import type { ProductAnalysis } from '../../types/product';
-import { formatMetric, formatProfitClass } from '../../utils/format';
+import { formatMetric, formatProfitClass, hasMoneyValue } from '../../utils/format';
 import { emptyMetrics } from '../../utils/metrics';
 
-const METRIC_KEYS = Object.keys(METRIC_CONFIG) as MetricKey[];
+const METRIC_KEYS = DETAIL_METRIC_ORDER;
 
 interface Props {
   product: ProductAnalysis;
@@ -34,7 +34,11 @@ export function MonthlyTable({ product, months }: Props) {
                   <td
                     key={key}
                     className={`whitespace-nowrap px-3 py-1.5 tabular-nums ${
-                      key === 'profit' || key === 'profitRate' ? formatProfitClass(metrics[key]) : 'text-gray-700'
+                      key === 'profit' || key === 'profitRate'
+                        ? formatProfitClass(metrics[key])
+                        : key === 'consumerRefund' && hasMoneyValue(metrics[key])
+                        ? 'text-red-600'
+                        : 'text-gray-700'
                     }`}
                   >
                     {formatMetric(key, metrics[key])}

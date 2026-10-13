@@ -42,3 +42,8 @@ export function formatProfitClass(value: number | null): string {
   if (value < 0) return 'text-red-600';
   return 'text-gray-500';
 }
+
+/** 消费者退款等金额列：有实际金额（非空且非 0）时标红 */
+export function hasMoneyValue(value: number | null): boolean {
+  return value !== null && !Number.isNaN(value) && value !== 0;
+}

@@ -23,6 +23,20 @@ export const METRIC_CONFIG: Record<MetricKey, MetricConfig> = {
 /** 默认开启的趋势指标 */
 export const DEFAULT_TREND_KEYS: MetricKey[] = ['settlementAmount', 'profit', 'profitRate'];
 
+/** 月度/SKU 明细表格的列顺序：消费者退款排在售后（消费者及履约保障-售后）之前 */
+export const DETAIL_METRIC_ORDER: MetricKey[] = [
+  'settlementQty',
+  'settlementAmount',
+  'principal',
+  'consumerRefund',
+  'afterSalesAmount',
+  'nonMerchantAfterSalesSubsidy',
+  'nonMerchantAfterSalesAdjustment',
+  'afterSalesRate',
+  'profit',
+  'profitRate',
+];
+
 /** 需要认为百分比类型的指标 */
 export const PERCENT_KEYS: MetricKey[] = ['afterSalesRate', 'profitRate'];
 
