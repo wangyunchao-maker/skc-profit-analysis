@@ -187,6 +187,8 @@ function CombinedTable({
   };
   const toggleSort = (key: string) => {
     setSort((prev) => (prev && prev.key === key ? { key, dir: prev.dir === 1 ? -1 : 1 } : { key, dir: 1 }));
+    // 切换排序时回到第一页，直接展示全局排序后的结果（排序作用于全部数据）
+    setPage(0);
   };
   const sortedRows = useMemo(() => {
     if (!sort) return rows;

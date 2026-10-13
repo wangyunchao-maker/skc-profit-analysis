@@ -80,6 +80,11 @@ export function ProductTable({ products, months, expanded, onToggleDetail, sort,
     });
   }, [products.length, pageSize]);
 
+  // 切换排序时回到第一页，直接展示全局排序后的结果（排序作用于全部数据）
+  useEffect(() => {
+    setPage(0);
+  }, [sort]);
+
   const pageRows = useMemo(
     () => products.slice(current * pageSize, current * pageSize + pageSize),
     [products, current, pageSize]
