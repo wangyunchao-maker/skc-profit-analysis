@@ -105,6 +105,15 @@ export function buildAnalysis(
   const monthPresence: Record<string, { shown: number; matched: number }> = {};
   for (const { month, parsed } of monthlies) {
     monthPresence[month] = { shown: 0, matched: 0 };
+    // SKU 粒度文件：按 SKC 挂载 SKU 明细，供详情页展开
+    if (parsed.skuRows.length > 0) {
+      for (const skuRow of parsed.skuRows) {
+        const product = bySkc.get(skuRow.skcId);
+        if (!product) continue;
+        if (!product.skuDetails) product.skuDetails = {};
+        (product.skuDetails[month] ??= []).push(skuRow);
+      }
+    }
     for (const row of parsed.rows) {
       monthPresence[month].shown++;
       const product = bySkc.get(row.skcId);

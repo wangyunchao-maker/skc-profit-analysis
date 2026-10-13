@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { TrendChart } from '../charts/TrendChart';
 import { MetricSelector } from '../charts/MetricSelector';
 import { MonthlyTable } from './MonthlyTable';
+import { SkuDetailTable } from './SkuDetailTable';
 import {
   DEFAULT_TREND_KEYS,
   METRIC_CONFIG,
@@ -17,8 +18,10 @@ interface Props {
 }
 
 export function ProductDetail({ product, months }: Props) {
-  const [tab, setTab] = useState<'monthly' | 'trend'>('monthly');
+  const [tab, setTab] = useState<'monthly' | 'trend' | 'sku'>('monthly');
   const [enabled, setEnabled] = useState<MetricKey[]>([...DEFAULT_TREND_KEYS]);
+
+  const hasSkuDetail = months.some((m) => (product.skuDetails?.[m]?.length ?? 0) > 0);
 
   const toggle = (key: MetricKey) => {
     setEnabled((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
@@ -53,16 +56,27 @@ export function ProductDetail({ product, months }: Props) {
         >
           趋势分析
         </button>
+        {hasSkuDetail && (
+          <button
+            type="button"
+            onClick={() => setTab('sku')}
+            className={`rounded px-3 py-1 text-sm ${
+              tab === 'sku' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:bg-gray-200'
+            }`}
+          >
+            SKU 明细
+          </button>
+        )}
       </div>
 
-      {tab === 'monthly' ? (
-        <MonthlyTable product={product} months={months} />
-      ) : (
+      {tab === 'monthly' && <MonthlyTable product={product} months={months} />}
+      {tab === 'trend' && (
         <div className="space-y-3">
           <MetricSelector enabled={enabled} onToggle={toggle} />
           <TrendChart months={months} data={trendData} enabled={enabled} />
         </div>
       )}
+      {tab === 'sku' && <SkuDetailTable product={product} months={months} />}
     </div>
   );
 }

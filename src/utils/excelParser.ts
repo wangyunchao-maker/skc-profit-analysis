@@ -37,6 +37,26 @@ function emptyRow(): RawProduct {
   };
 }
 
+/** SKU 粒度文件按 SKC 汇总时，这些数值/比率字段直接相加（本金按各 SKU 真实成本相加，
+ * 售后率与 SKC 粒度文件口径一致，同样为各 SKU 值相加）。比率类字段不参与加权。 */
+const ADDITIVE_FIELDS: InternalField[] = [
+  'settlementQty',
+  'settlementAmount',
+  'principal',
+  'afterSalesAmount',
+  'nonMerchantAfterSalesSubsidy',
+  'nonMerchantAfterSalesAdjustment',
+  'consumerRefund',
+  'afterSalesRate',
+  'profit',
+];
+
+function addNullable(a: number | null, b: number | null): number | null {
+  if (a === null) return b;
+  if (b === null) return a;
+  return a + b;
+}
+
 function assignField(rec: RawProduct, field: InternalField, value: unknown): void {
   switch (field) {
     case 'skcId':
@@ -50,6 +70,12 @@ function assignField(rec: RawProduct, field: InternalField, value: unknown): voi
       break;
     case 'skcCode':
       rec.skcCode = toText(value);
+      break;
+    case 'skuId':
+      rec.skuId = toText(value);
+      break;
+    case 'skuCode':
+      rec.skuCode = toText(value);
       break;
     case 'specification':
       rec.specification = toText(value);
@@ -77,6 +103,7 @@ export async function parseExcel(file: File): Promise<ParsedExcel> {
     hasSkcId: false,
     presentFields: new Set(),
     rows: [],
+    skuRows: [],
     duplicateSkcs: [],
   };
   if (!sheet) return empty;
@@ -96,10 +123,15 @@ export async function parseExcel(file: File): Promise<ParsedExcel> {
 
   const presentFields = new Set<string>(headerToField.values());
   const hasSkcId = presentFields.has('skcId');
+  // 月度文件可能按 SKU 粒度导出（同一 SKC 对应多行），需要按 SKC 汇总
+  const skuLevel = presentFields.has('skuId') || presentFields.has('skuCode');
 
   const rows: RawProduct[] = [];
+  /** SKU 粒度文件保留原始 SKU 行，供详情页展开查看 */
+  const skuRows: RawProduct[] = [];
   const duplicateSkcs: string[] = [];
   const seen = new Set<string>();
+  const bySkc = new Map<string, RawProduct>();
 
   const images = await extractEmbeddedImages(buffer);
 
@@ -116,13 +148,44 @@ export async function parseExcel(file: File): Promise<ParsedExcel> {
 
     const skc = rec.skcId;
     if (!skc) continue; // 跳过无 SKC 的行（如空行/合计行）
-    if (seen.has(skc)) {
-      duplicateSkcs.push(skc);
+
+    if (!skuLevel) {
+      // SKC 粒度文件：每个 SKC 一行，出现重复视为异常
+      if (seen.has(skc)) {
+        duplicateSkcs.push(skc);
+        continue;
+      }
+      seen.add(skc);
+      rows.push(rec);
       continue;
     }
-    seen.add(skc);
-    rows.push(rec);
+
+    // SKU 粒度文件：把同一 SKC 的多个 SKU 汇总成一条 SKC 记录，同时保留 SKU 明细
+    skuRows.push(rec);
+    let merged = bySkc.get(skc);
+    if (!merged) {
+      merged = { ...rec };
+      bySkc.set(skc, merged);
+      rows.push(merged);
+    } else {
+      const dst = merged as unknown as Record<string, number | null>;
+      const src = rec as unknown as Record<string, number | null>;
+      for (const field of ADDITIVE_FIELDS) {
+        dst[field] = addNullable(dst[field], src[field]);
+      }
+      if (!merged.image && rec.image) merged.image = rec.image;
+    }
   }
 
-  return { fileName: file.name, hasSkcId, presentFields, rows, duplicateSkcs };
+  // SKU 汇总后的比率字段需重算，避免把比率直接相加
+  if (skuLevel) {
+    for (const merged of bySkc.values()) {
+      merged.profitRate =
+        merged.profit !== null && merged.principal !== null && merged.principal !== 0
+          ? merged.profit / merged.principal
+          : null;
+    }
+  }
+
+  return { fileName: file.name, hasSkcId, presentFields, rows, skuRows, duplicateSkcs };
 }

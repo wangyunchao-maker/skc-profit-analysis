@@ -6,7 +6,10 @@ export const COLUMN_ALIASES = {
   productName: ['商品名称', '产品名称', '名称'],
   skcId: ['SKC ID', 'SKCID', 'SKC_ID', 'skc id', 'SKC'],
   spuId: ['SPU ID', 'SPUID', 'SPU_ID', 'spu id', 'SPU'],
+  skuId: ['SKU ID', 'SKUID', 'SKU_ID', 'sku id'],
   skcCode: ['SKC货号', 'SKC货号ID', '货号', 'SKC编号'],
+  skuCode: ['SKU货号', 'SKU编号'],
+  unitCost: ['进价', 'SKU进价', '商品进价'],
   specification: ['商品规格', '规格', 'SPU规格'],
   image: ['图片', '商品图片', '主图'],
 
@@ -30,6 +33,7 @@ export const NUMBER_FIELDS: InternalField[] = [
   'settlementQty',
   'settlementAmount',
   'principal',
+  'unitCost',
   'afterSalesAmount',
   'nonMerchantAfterSalesSubsidy',
   'nonMerchantAfterSalesAdjustment',

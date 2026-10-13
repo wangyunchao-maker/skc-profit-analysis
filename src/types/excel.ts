@@ -7,9 +7,11 @@ export interface ParsedExcel {
   hasSkcId: boolean;
   /** 表头中识别到的内部字段集合 */
   presentFields: Set<string>;
-  /** 标准化后的数据行（已去重，SKC 非空） */
+  /** 标准化后的数据行（SKC 非空；SKU 粒度文件已按 SKC 汇总） */
   rows: RawProduct[];
-  /** 文件内重复的 SKC 列表 */
+  /** SKU 粒度文件的原始 SKU 明细行（SKC 粒度文件为空） */
+  skuRows: RawProduct[];
+  /** SKC 粒度文件内重复的 SKC 列表（SKU 粒度文件为空） */
   duplicateSkcs: string[];
 }
 
