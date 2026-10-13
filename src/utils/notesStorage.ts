@@ -54,7 +54,12 @@ export function downloadNotes(notes: SkcNotes): void {
   URL.revokeObjectURL(url);
 }
 
+/** 解析备注 JSON 文本（格式非法时抛出，由调用方提示用户） */
+export function parseNotes(text: string): SkcNotes {
+  return normalizeNotes(JSON.parse(text));
+}
+
 /** 读取导入的备注文件 */
 export async function readNotesFile(file: File): Promise<SkcNotes> {
-  return normalizeNotes(JSON.parse(await file.text()));
+  return parseNotes(await file.text());
 }

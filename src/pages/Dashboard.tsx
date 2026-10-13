@@ -26,11 +26,21 @@ import { sumMetrics } from '../utils/metrics';
 import {
   downloadNotes,
   loadNotes,
+  parseNotes,
   readNotesFile,
   saveNotes,
   withNote,
   type SkcNotes,
 } from '../utils/notesStorage';
+import {
+  ensureWritePermission,
+  isNotesFolderSupported,
+  loadNotesDirectory,
+  pickNotesDirectory,
+  readNotesFromDirectory,
+  writeNotesToDirectory,
+  type NotesDirectoryHandle,
+} from '../utils/notesFolder';
 
 type Status = 'idle' | 'loading' | 'ready';
 type Tab = 'profit' | 'detail';
@@ -62,6 +72,9 @@ export function Dashboard() {
   const [refundRateMin, setRefundRateMin] = useState('');
   // SKC 备注：保存在浏览器本地，刷新后仍在
   const [notes, setNotes] = useState<SkcNotes>(() => loadNotes());
+  // 备注文件夹（Chrome/Edge 支持，可一键把备注写进指定文件夹）
+  const [notesDir, setNotesDir] = useState<NotesDirectoryHandle | null>(null);
+  const [notesMessage, setNotesMessage] = useState('');
   const [sort, setSort] = useState<SortConfig | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
@@ -273,8 +286,71 @@ export function Dashboard() {
     try {
       const imported = await readNotesFile(file);
       setNotes((prev) => ({ ...prev, ...imported }));
+      flashNotesMessage(`已载入 ${Object.keys(imported).length} 条备注`);
     } catch {
       window.alert('备注文件解析失败，请确认是本应用导出的 JSON 文件。');
+    }
+  };
+
+  const flashNotesMessage = (message: string) => {
+    setNotesMessage(message);
+    window.setTimeout(() => setNotesMessage(''), 3000);
+  };
+
+  // 打开页面时恢复上次选择的备注文件夹
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const handle = await loadNotesDirectory();
+      if (!cancelled && handle) setNotesDir(handle);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handlePickNotesFolder = async () => {
+    const handle = await pickNotesDirectory();
+    if (!handle) return;
+    setNotesDir(handle);
+    flashNotesMessage(`备注文件夹已设为「${handle.name}」`);
+  };
+
+  const handleExportNotes = async () => {
+    if (notesDir) {
+      const granted = await ensureWritePermission(notesDir);
+      if (granted) {
+        try {
+          await writeNotesToDirectory(notesDir, notes);
+          flashNotesMessage(`已更新 ${notesDir.name}/SKC备注.json`);
+          return;
+        } catch {
+          // 写入失败（如文件被占用）时退回普通下载
+        }
+      }
+    }
+    downloadNotes(notes);
+    flashNotesMessage('已下载备注文件');
+  };
+
+  const handleLoadNotesFromFolder = async () => {
+    if (!notesDir) return;
+    const granted = await ensureWritePermission(notesDir);
+    if (!granted) {
+      window.alert('没有该文件夹的访问权限，请重新选择备注文件夹。');
+      return;
+    }
+    const text = await readNotesFromDirectory(notesDir);
+    if (text === null) {
+      flashNotesMessage('文件夹里还没有 SKC备注.json');
+      return;
+    }
+    try {
+      const imported = parseNotes(text);
+      setNotes((prev) => ({ ...prev, ...imported }));
+      flashNotesMessage(`已从文件夹载入 ${Object.keys(imported).length} 条备注`);
+    } catch {
+      window.alert('文件夹中的 SKC备注.json 格式不正确。');
     }
   };
 
@@ -463,8 +539,13 @@ export function Dashboard() {
               refundRateMin={refundRateMin}
               onRefundRateMinChange={setRefundRateMin}
               notesCount={Object.keys(notes).length}
-              onExportNotes={() => downloadNotes(notes)}
+              notesFolderSupported={isNotesFolderSupported()}
+              notesFolderName={notesDir?.name ?? null}
+              notesMessage={notesMessage}
+              onExportNotes={handleExportNotes}
               onImportNotes={handleImportNotes}
+              onPickNotesFolder={handlePickNotesFolder}
+              onLoadNotesFromFolder={handleLoadNotesFromFolder}
             />
             <ProductTable
               products={visible}

@@ -12,8 +12,16 @@ interface Props {
   onRefundRateMinChange: (v: string) => void;
   /** 已保存的备注条数 */
   notesCount: number;
+  /** 是否支持选择本地备注文件夹 */
+  notesFolderSupported: boolean;
+  /** 已记住的备注文件夹名 */
+  notesFolderName: string | null;
+  /** 操作结果提示 */
+  notesMessage: string;
   onExportNotes: () => void;
   onImportNotes: (file: File) => void;
+  onPickNotesFolder: () => void;
+  onLoadNotesFromFolder: () => void;
 }
 
 const FILTER_OPTIONS: { value: ProfitFilter; label: string }[] = [
@@ -32,8 +40,13 @@ export function SearchBar({
   refundRateMin,
   onRefundRateMinChange,
   notesCount,
+  notesFolderSupported,
+  notesFolderName,
+  notesMessage,
   onExportNotes,
   onImportNotes,
+  onPickNotesFolder,
+  onLoadNotesFromFolder,
 }: Props) {
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -72,19 +85,39 @@ export function SearchBar({
         <span className="text-sm text-gray-500">%</span>
       </div>
       <div className="flex items-center gap-2">
+        {notesFolderSupported && (
+          <button
+            type="button"
+            onClick={onPickNotesFolder}
+            title="选择一个文件夹，之后导出备注会直接覆盖写入该文件夹里的 SKC备注.json"
+            className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+          >
+            {notesFolderName ? `备注文件夹：${notesFolderName}` : '选择备注文件夹'}
+          </button>
+        )}
+        {notesFolderName && (
+          <button
+            type="button"
+            onClick={onLoadNotesFromFolder}
+            title="从已选的备注文件夹里读取 SKC备注.json 并载入"
+            className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+          >
+            从文件夹加载
+          </button>
+        )}
         <button
           type="button"
           onClick={onExportNotes}
-          title="把备注导出为 JSON 文件备份"
+          title="导出备注；已选文件夹时直接写入文件夹，否则下载到本机"
           className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
         >
           导出备注{notesCount > 0 ? `(${notesCount})` : ''}
         </button>
         <label
-          title="从导出的 JSON 文件恢复备注"
+          title="选择本应用导出的备注 JSON 文件并载入"
           className="cursor-pointer rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
         >
-          导入备注
+          加载备注文件
           <input
             type="file"
             accept=".json,application/json"
@@ -96,6 +129,7 @@ export function SearchBar({
             }}
           />
         </label>
+        {notesMessage && <span className="text-sm text-emerald-600">{notesMessage}</span>}
       </div>
     </div>
   );
