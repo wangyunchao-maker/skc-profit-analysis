@@ -240,12 +240,8 @@ export function Dashboard() {
   };
 
   const toggleDetail = (skcId: string) => {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(skcId)) next.delete(skcId);
-      else next.add(skcId);
-      return next;
-    });
+    // 同一时间只展开一个商品的详情，展开新的会自动收起上一个
+    setExpanded((prev) => (prev.has(skcId) ? new Set() : new Set([skcId])));
   };
 
   return (
