@@ -1,4 +1,5 @@
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState, type MouseEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { CheckSquare, ChevronDown, ChevronUp, ChevronsUpDown, Copy } from 'lucide-react';
 import { METRIC_CONFIG, SORTABLE_KEYS, type MetricKey } from '../../config/metrics';
 import type { ProductAnalysis } from '../../types/product';
@@ -34,6 +35,9 @@ const STICKY_LEFT = 'sticky left-0 z-10 bg-white';
 const STICKY_RIGHT = 'sticky right-0 z-10 bg-white';
 const RED_KEYS = new Set<string>(['consumerRefund', 'afterSalesAmount']);
 const PAGE_SIZES = [10, 20, 50, 100, 200];
+/** 备注悬浮框最大宽度与预估高度（用于判断向上还是向下弹出） */
+const TIP_MAX_WIDTH = 320;
+const TIP_ESTIMATED_HEIGHT = 120;
 
 interface Props {
   products: ProductAnalysis[];
@@ -82,6 +86,8 @@ export function ProductTable({
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [copied, setCopied] = useState(false);
+  /** 备注悬浮框：展示完整备注内容 */
+  const [tip, setTip] = useState<{ text: string; left: number; top: number; above: boolean } | null>(null);
 
   const pageCount = Math.max(1, Math.ceil(products.length / pageSize));
   const current = page >= pageCount ? pageCount - 1 : page;
@@ -98,6 +104,23 @@ export function ProductTable({
   useEffect(() => {
     setPage(0);
   }, [sort]);
+
+  /** 鼠标悬浮备注单元格时，弹出完整内容；靠近屏幕底部时向上弹出 */
+  const showNoteTip = (e: MouseEvent<HTMLTableCellElement>, text: string) => {
+    if (text.trim() === '') return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const above = window.innerHeight - rect.bottom < TIP_ESTIMATED_HEIGHT + 12;
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - TIP_MAX_WIDTH - 8));
+    setTip({ text, left, top: above ? rect.top - 8 : rect.bottom + 8, above });
+  };
+
+  // 滚动后悬浮框位置会失效，直接收起
+  useEffect(() => {
+    if (!tip) return;
+    const hide = () => setTip(null);
+    window.addEventListener('scroll', hide, true);
+    return () => window.removeEventListener('scroll', hide, true);
+  }, [tip]);
 
   const pageRows = useMemo(
     () => products.slice(current * pageSize, current * pageSize + pageSize),
@@ -245,10 +268,15 @@ export function ProductTable({
                         </td>
                       );
                     })}
-                    <td className="whitespace-nowrap px-2 py-1.5">
+                    <td
+                      className="whitespace-nowrap px-2 py-1.5"
+                      onMouseEnter={(e) => showNoteTip(e, notes[p.skcId] ?? '')}
+                      onMouseLeave={() => setTip(null)}
+                    >
                       <input
                         value={notes[p.skcId] ?? ''}
                         onChange={(e) => onNoteChange(p.skcId, e.target.value)}
+                        onFocus={() => setTip(null)}
                         placeholder="添加备注"
                         className="w-40 rounded border border-transparent bg-transparent px-1.5 py-1 text-sm text-gray-700 hover:border-gray-300 focus:border-blue-400 focus:bg-white focus:outline-none"
                       />
@@ -325,6 +353,23 @@ export function ProductTable({
           </div>
         </div>
       )}
+
+      {tip &&
+        createPortal(
+          <div
+            className="pointer-events-none fixed z-50 max-h-[60vh] overflow-hidden whitespace-pre-wrap break-words rounded-md bg-gray-900/95 px-3 py-2 text-xs leading-relaxed text-white shadow-lg"
+            style={{
+              left: tip.left,
+              top: tip.top,
+              width: 'max-content',
+              maxWidth: TIP_MAX_WIDTH,
+              transform: tip.above ? 'translateY(-100%)' : undefined,
+            }}
+          >
+            {tip.text}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
