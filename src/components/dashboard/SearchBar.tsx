@@ -7,6 +7,9 @@ interface Props {
   onKeywordChange: (v: string) => void;
   filter: ProfitFilter;
   onFilterChange: (f: ProfitFilter) => void;
+  /** 退款率下限（百分比数值字符串，空表示不限） */
+  refundRateMin: string;
+  onRefundRateMinChange: (v: string) => void;
 }
 
 const FILTER_OPTIONS: { value: ProfitFilter; label: string }[] = [
@@ -17,7 +20,14 @@ const FILTER_OPTIONS: { value: ProfitFilter; label: string }[] = [
 
 export type { ProfitFilter };
 
-export function SearchBar({ keyword, onKeywordChange, filter, onFilterChange }: Props) {
+export function SearchBar({
+  keyword,
+  onKeywordChange,
+  filter,
+  onFilterChange,
+  refundRateMin,
+  onRefundRateMinChange,
+}: Props) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <div className="relative">
@@ -42,6 +52,17 @@ export function SearchBar({ keyword, onKeywordChange, filter, onFilterChange }: 
             {o.label}
           </button>
         ))}
+      </div>
+      <div className="flex items-center gap-1 rounded-md border border-gray-300 px-2 py-1.5">
+        <span className="whitespace-nowrap text-sm text-gray-500">退款率 ≥</span>
+        <input
+          value={refundRateMin}
+          onChange={(e) => onRefundRateMinChange(e.target.value.replace(/[^\d.]/g, ''))}
+          inputMode="decimal"
+          placeholder="5"
+          className="w-14 text-sm focus:outline-none"
+        />
+        <span className="text-sm text-gray-500">%</span>
       </div>
     </div>
   );

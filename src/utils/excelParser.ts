@@ -31,6 +31,7 @@ function emptyRow(): RawProduct {
     nonMerchantAfterSalesSubsidy: null,
     nonMerchantAfterSalesAdjustment: null,
     consumerRefund: null,
+    refundRate: null,
     afterSalesRate: null,
     profit: null,
     profitRate: null,
@@ -55,6 +56,12 @@ function addNullable(a: number | null, b: number | null): number | null {
   if (a === null) return b;
   if (b === null) return a;
   return a + b;
+}
+
+/** 退款率为派生指标（平台文件不提供该列）：消费者退款 ÷ 结算金额 */
+function deriveRefundRate(consumerRefund: number | null, settlementAmount: number | null): number | null {
+  if (consumerRefund === null || settlementAmount === null || settlementAmount === 0) return null;
+  return consumerRefund / settlementAmount;
 }
 
 function assignField(rec: RawProduct, field: InternalField, value: unknown): void {
@@ -185,6 +192,14 @@ export async function parseExcel(file: File): Promise<ParsedExcel> {
           ? merged.profit / merged.principal
           : null;
     }
+  }
+
+  // 退款率为派生指标，按「消费者退款 ÷ 结算金额」在各层级重算（SKU 汇总后的 SKC 行、单个 SKU 行同理）
+  for (const row of rows) {
+    row.refundRate = deriveRefundRate(row.consumerRefund, row.settlementAmount);
+  }
+  for (const row of skuRows) {
+    row.refundRate = deriveRefundRate(row.consumerRefund, row.settlementAmount);
   }
 
   return { fileName: file.name, hasSkcId, presentFields, rows, skuRows, duplicateSkcs };

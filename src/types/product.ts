@@ -6,6 +6,8 @@ export interface ProductMetrics {
   nonMerchantAfterSalesSubsidy: number | null;
   nonMerchantAfterSalesAdjustment: number | null;
   consumerRefund: number | null;
+  /** 退款率（派生指标：消费者退款 ÷ 结算金额，平台文件不提供该列） */
+  refundRate: number | null;
   afterSalesRate: number | null;
   profit: number | null;
   profitRate: number | null;

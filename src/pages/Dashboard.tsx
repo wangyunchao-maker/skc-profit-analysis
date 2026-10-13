@@ -51,6 +51,7 @@ export function Dashboard() {
 
   const [keyword, setKeyword] = useState('');
   const [filter, setFilter] = useState<ProfitFilter>('all');
+  const [refundRateMin, setRefundRateMin] = useState('');
   const [sort, setSort] = useState<SortConfig | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
@@ -216,6 +217,11 @@ export function Dashboard() {
         return filter === 'profit' ? profit > 0 : profit < 0;
       });
     }
+    // 退款率筛选：只看退款率 ≥ 输入值（%）的商品
+    const refundMin = Number(refundRateMin);
+    if (refundRateMin.trim() !== '' && Number.isFinite(refundMin)) {
+      list = list.filter((p) => p.summary.refundRate !== null && p.summary.refundRate * 100 >= refundMin);
+    }
     if (sort) {
       const { key, dir } = sort;
       const mul = dir === 'asc' ? 1 : -1;
@@ -229,7 +235,7 @@ export function Dashboard() {
       });
     }
     return list;
-  }, [products, keyword, filter, sort]);
+  }, [products, keyword, filter, refundRateMin, sort]);
 
   const toggleSort = (key: MetricKey) => {
     setSort((prev) => {
@@ -421,7 +427,14 @@ export function Dashboard() {
               totalProfit={totals.profit}
             />
             <ValidationPanel issues={issues} />
-            <SearchBar keyword={keyword} onKeywordChange={setKeyword} filter={filter} onFilterChange={setFilter} />
+            <SearchBar
+              keyword={keyword}
+              onKeywordChange={setKeyword}
+              filter={filter}
+              onFilterChange={setFilter}
+              refundRateMin={refundRateMin}
+              onRefundRateMinChange={setRefundRateMin}
+            />
             <ProductTable
               products={visible}
               months={months}

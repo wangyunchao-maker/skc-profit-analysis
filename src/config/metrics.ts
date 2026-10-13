@@ -15,6 +15,7 @@ export const METRIC_CONFIG: Record<MetricKey, MetricConfig> = {
   nonMerchantAfterSalesSubsidy: { label: '非商责售后补贴金额', type: 'money' },
   nonMerchantAfterSalesAdjustment: { label: '非商责售后补贴调整', type: 'money' },
   consumerRefund: { label: '消费者退款', type: 'money' },
+  refundRate: { label: '退款率', type: 'percent' },
   afterSalesRate: { label: '售后率', type: 'percent' },
   profit: { label: '利润', type: 'money' },
   profitRate: { label: '利润率', type: 'percent' },
@@ -29,6 +30,7 @@ export const DETAIL_METRIC_ORDER: MetricKey[] = [
   'settlementAmount',
   'principal',
   'consumerRefund',
+  'refundRate',
   'afterSalesAmount',
   'nonMerchantAfterSalesSubsidy',
   'nonMerchantAfterSalesAdjustment',
@@ -38,7 +40,7 @@ export const DETAIL_METRIC_ORDER: MetricKey[] = [
 ];
 
 /** 需要认为百分比类型的指标 */
-export const PERCENT_KEYS: MetricKey[] = ['afterSalesRate', 'profitRate'];
+export const PERCENT_KEYS: MetricKey[] = ['refundRate', 'afterSalesRate', 'profitRate'];
 
 /** 金额/数量类（左轴） */
 export const LEFT_AXIS_KEYS: MetricKey[] = [
@@ -58,6 +60,7 @@ export const SORTABLE_KEYS: MetricKey[] = [
   'settlementAmount',
   'principal',
   'consumerRefund',
+  'refundRate',
   'afterSalesAmount',
   'afterSalesRate',
   'profit',
