@@ -43,7 +43,21 @@ export function formatProfitClass(value: number | null): string {
   return 'text-gray-500';
 }
 
-/** 消费者退款等金额列：有实际金额（非空且非 0）时标红 */
+/** 消费者退款、售后等金额列：有实际金额（非空且非 0）时标红 */
 export function hasMoneyValue(value: number | null): boolean {
   return value !== null && !Number.isNaN(value) && value !== 0;
+}
+
+/** 明细表中需要标红的负向金额列（退款、售后） */
+const RED_MONEY_KEYS: MetricKey[] = ['consumerRefund', 'afterSalesAmount'];
+
+/** 明细表中需要标绿的正向金额列（补贴） */
+const GREEN_MONEY_KEYS: MetricKey[] = ['nonMerchantAfterSalesSubsidy', 'nonMerchantAfterSalesAdjustment'];
+
+/** 明细表金额列颜色：退款/售后有金额标红，补贴有金额标绿，其余返回 null */
+export function moneyHighlightClass(key: MetricKey, value: number | null): string | null {
+  if (!hasMoneyValue(value)) return null;
+  if (RED_MONEY_KEYS.includes(key)) return 'text-red-600';
+  if (GREEN_MONEY_KEYS.includes(key)) return 'text-emerald-600';
+  return null;
 }
