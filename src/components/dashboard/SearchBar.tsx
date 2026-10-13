@@ -10,6 +10,10 @@ interface Props {
   /** 退款率下限（百分比数值字符串，空表示不限） */
   refundRateMin: string;
   onRefundRateMinChange: (v: string) => void;
+  /** 已保存的备注条数 */
+  notesCount: number;
+  onExportNotes: () => void;
+  onImportNotes: (file: File) => void;
 }
 
 const FILTER_OPTIONS: { value: ProfitFilter; label: string }[] = [
@@ -27,6 +31,9 @@ export function SearchBar({
   onFilterChange,
   refundRateMin,
   onRefundRateMinChange,
+  notesCount,
+  onExportNotes,
+  onImportNotes,
 }: Props) {
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -63,6 +70,32 @@ export function SearchBar({
           className="w-14 text-sm focus:outline-none"
         />
         <span className="text-sm text-gray-500">%</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onExportNotes}
+          title="把备注导出为 JSON 文件备份"
+          className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+        >
+          导出备注{notesCount > 0 ? `(${notesCount})` : ''}
+        </button>
+        <label
+          title="从导出的 JSON 文件恢复备注"
+          className="cursor-pointer rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
+        >
+          导入备注
+          <input
+            type="file"
+            accept=".json,application/json"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) onImportNotes(file);
+              e.target.value = '';
+            }}
+          />
+        </label>
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import { CheckSquare, ChevronDown, ChevronUp, ChevronsUpDown, Copy } from 'lucid
 import { METRIC_CONFIG, SORTABLE_KEYS, type MetricKey } from '../../config/metrics';
 import type { ProductAnalysis } from '../../types/product';
 import { formatMetric, formatProfitClass } from '../../utils/format';
+import type { SkcNotes } from '../../utils/notesStorage';
 import { ZoomImage } from '../ZoomImage';
 import { ProductDetail } from './ProductDetail';
 
@@ -14,7 +15,7 @@ export interface SortConfig {
 export type ProfitFilter = 'all' | 'profit' | 'loss';
 
 interface ColumnDef {
-  key: 'select' | 'image' | 'skcId' | 'spuId' | MetricKey | 'action';
+  key: 'select' | 'image' | 'skcId' | 'spuId' | MetricKey | 'note' | 'action';
   label: string;
   sticky?: 'left' | 'right';
 }
@@ -25,6 +26,7 @@ const COLUMNS: ColumnDef[] = [
   { key: 'skcId', label: 'SKC ID', sticky: 'left' },
   { key: 'spuId', label: 'SPU ID' },
   ...SORTABLE_KEYS.map((k) => ({ key: k as ColumnDef['key'], label: METRIC_CONFIG[k].label })),
+  { key: 'note', label: '备注' },
   { key: 'action', label: '操作', sticky: 'right' },
 ];
 
@@ -40,6 +42,9 @@ interface Props {
   onToggleDetail: (skcId: string) => void;
   sort: SortConfig | null;
   onSort: (key: MetricKey) => void;
+  /** SKC 备注（本地持久化） */
+  notes: SkcNotes;
+  onNoteChange: (skcId: string, text: string) => void;
 }
 
 async function copyText(text: string): Promise<boolean> {
@@ -63,7 +68,16 @@ async function copyText(text: string): Promise<boolean> {
   }
 }
 
-export function ProductTable({ products, months, expanded, onToggleDetail, sort, onSort }: Props) {
+export function ProductTable({
+  products,
+  months,
+  expanded,
+  onToggleDetail,
+  sort,
+  onSort,
+  notes,
+  onNoteChange,
+}: Props) {
   const [pageSize, setPageSize] = useState(20);
   const [page, setPage] = useState(0);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -231,6 +245,14 @@ export function ProductTable({ products, months, expanded, onToggleDetail, sort,
                         </td>
                       );
                     })}
+                    <td className="whitespace-nowrap px-2 py-1.5">
+                      <input
+                        value={notes[p.skcId] ?? ''}
+                        onChange={(e) => onNoteChange(p.skcId, e.target.value)}
+                        placeholder="添加备注"
+                        className="w-40 rounded border border-transparent bg-transparent px-1.5 py-1 text-sm text-gray-700 hover:border-gray-300 focus:border-blue-400 focus:bg-white focus:outline-none"
+                      />
+                    </td>
                     <td className={`${STICKY_RIGHT} whitespace-nowrap px-3 py-1.5 text-right`}>
                       <button
                         type="button"

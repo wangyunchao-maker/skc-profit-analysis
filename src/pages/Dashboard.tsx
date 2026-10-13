@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { BarChart3, FileUp, Loader2, Settings2, Sparkles } from 'lucide-react';
 import { Header } from '../components/Header';
 import { SummaryUploader } from '../components/upload/SummaryUploader';
@@ -23,6 +23,14 @@ import {
 } from '../utils/analyzer';
 import { sortMonths } from '../utils/monthParser';
 import { sumMetrics } from '../utils/metrics';
+import {
+  downloadNotes,
+  loadNotes,
+  readNotesFile,
+  saveNotes,
+  withNote,
+  type SkcNotes,
+} from '../utils/notesStorage';
 
 type Status = 'idle' | 'loading' | 'ready';
 type Tab = 'profit' | 'detail';
@@ -52,6 +60,8 @@ export function Dashboard() {
   const [keyword, setKeyword] = useState('');
   const [filter, setFilter] = useState<ProfitFilter>('all');
   const [refundRateMin, setRefundRateMin] = useState('');
+  // SKC 备注：保存在浏览器本地，刷新后仍在
+  const [notes, setNotes] = useState<SkcNotes>(() => loadNotes());
   const [sort, setSort] = useState<SortConfig | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
@@ -250,6 +260,24 @@ export function Dashboard() {
     setExpanded((prev) => (prev.has(skcId) ? new Set() : new Set([skcId])));
   };
 
+  // 备注一旦变动就写入浏览器本地存储，刷新后仍在
+  useEffect(() => {
+    saveNotes(notes);
+  }, [notes]);
+
+  const handleNoteChange = (skcId: string, text: string) => {
+    setNotes((prev) => withNote(prev, skcId, text));
+  };
+
+  const handleImportNotes = async (file: File) => {
+    try {
+      const imported = await readNotesFile(file);
+      setNotes((prev) => ({ ...prev, ...imported }));
+    } catch {
+      window.alert('备注文件解析失败，请确认是本应用导出的 JSON 文件。');
+    }
+  };
+
   return (
     <div className="min-h-screen min-w-[1280px]">
       <Header />
@@ -434,6 +462,9 @@ export function Dashboard() {
               onFilterChange={setFilter}
               refundRateMin={refundRateMin}
               onRefundRateMinChange={setRefundRateMin}
+              notesCount={Object.keys(notes).length}
+              onExportNotes={() => downloadNotes(notes)}
+              onImportNotes={handleImportNotes}
             />
             <ProductTable
               products={visible}
@@ -442,6 +473,8 @@ export function Dashboard() {
               onToggleDetail={toggleDetail}
               sort={sort}
               onSort={toggleSort}
+              notes={notes}
+              onNoteChange={handleNoteChange}
             />
             <div className="pb-4 text-right text-xs text-gray-400">
               筛选结果 {visible.length} / {products.length}
