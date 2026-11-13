@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { DetailExportData } from '../../types/detail';
 import { PLACEHOLDER } from '../../utils/format';
+import { ZoomImage } from '../ZoomImage';
 
 const PAGE_SIZES = [10, 20, 50, 100, 200];
 
@@ -166,9 +167,11 @@ function Pager({
 function CombinedTable({
   rows,
   settlementQtyBySkc,
+  imageBySkc,
 }: {
   rows: ComRow[];
   settlementQtyBySkc?: Map<string, number>;
+  imageBySkc?: Map<string, string>;
 }) {
   const [pageSize, setPageSize] = useState(20);
   const [page, setPage] = useState(0);
@@ -383,8 +386,15 @@ function CombinedTable({
                         className="whitespace-nowrap px-3 py-1.5 align-middle tabular-nums text-gray-600"
                         title={`SKC: ${seg.skcId || ''}  SPU: ${seg.spuId || ''}`}
                       >
-                        <div>SKC: {seg.skcId || '—'}</div>
-                        <div>SPU: {seg.spuId || '—'}</div>
+                        <div className="flex items-center gap-2">
+                          {seg.skcId && imageBySkc?.get(seg.skcId) && (
+                            <ZoomImage image={imageBySkc.get(seg.skcId)} className="h-10 w-10" />
+                          )}
+                          <div>
+                            <div>SKC: {seg.skcId || '—'}</div>
+                            <div>SPU: {seg.spuId || '—'}</div>
+                          </div>
+                        </div>
                       </td>
                     ) : null}
                     <td className="whitespace-nowrap px-3 py-1.5 tabular-nums text-gray-700">{r.skuId || PLACEHOLDER}</td>
@@ -435,9 +445,12 @@ function CombinedTable({
 export function DetailView({
   data,
   settlementQtyBySkc,
+  imageBySkc,
 }: {
   data: DetailExportData;
   settlementQtyBySkc?: Map<string, number>;
+  /** 来自利润分析的 SKC 商品图（同一 SKC 取一张即可） */
+  imageBySkc?: Map<string, string>;
 }) {
   const [keyword, setKeyword] = useState('');
 
@@ -479,7 +492,7 @@ export function DetailView({
         />
       </div>
 
-      <CombinedTable rows={combined} settlementQtyBySkc={settlementQtyBySkc} />
+      <CombinedTable rows={combined} settlementQtyBySkc={settlementQtyBySkc} imageBySkc={imageBySkc} />
     </div>
   );
 }

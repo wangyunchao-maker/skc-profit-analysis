@@ -54,6 +54,15 @@ export function Dashboard() {
     return m;
   };
 
+  // 明细页复用利润分析里的 SKC 商品图：同一 SKC 有多张时取第一张
+  const productsToImageMap = (): Map<string, string> => {
+    const m = new Map<string, string>();
+    for (const p of products) {
+      if (p.skcId && p.image) m.set(p.skcId, p.image);
+    }
+    return m;
+  };
+
   const [tab, setTab] = useState<Tab>('profit');
 
   // ---------- 利润分析（仅月度文件） ----------
@@ -427,7 +436,11 @@ export function Dashboard() {
                     修改文件
                   </button>
                 </div>
-                <DetailView data={detailData} settlementQtyBySkc={productsToSettlementMap()} />
+                <DetailView
+                  data={detailData}
+                  settlementQtyBySkc={productsToSettlementMap()}
+                  imageBySkc={productsToImageMap()}
+                />
               </>
             )}
           </div>

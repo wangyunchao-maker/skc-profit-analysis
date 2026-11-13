@@ -16,9 +16,9 @@ export interface SortConfig {
 export type ProfitFilter = 'all' | 'profit' | 'loss';
 
 interface ColumnDef {
-  key: 'select' | 'image' | 'skcId' | 'spuId' | MetricKey | 'note' | 'action';
+  key: 'select' | 'image' | 'skcId' | 'spuId' | MetricKey | 'note';
   label: string;
-  sticky?: 'left' | 'right';
+  sticky?: 'left';
 }
 
 const COLUMNS: ColumnDef[] = [
@@ -28,11 +28,9 @@ const COLUMNS: ColumnDef[] = [
   { key: 'spuId', label: 'SPU ID' },
   ...SORTABLE_KEYS.map((k) => ({ key: k as ColumnDef['key'], label: METRIC_CONFIG[k].label })),
   { key: 'note', label: '备注' },
-  { key: 'action', label: '操作', sticky: 'right' },
 ];
 
 const STICKY_LEFT = 'sticky left-0 z-10 bg-white';
-const STICKY_RIGHT = 'sticky right-0 z-10 bg-white';
 const RED_KEYS = new Set<string>(['consumerRefund', 'afterSalesAmount']);
 const PAGE_SIZES = [10, 20, 50, 100, 200];
 /** 备注悬浮框最大宽度与预估高度（用于判断向上还是向下弹出） */
@@ -192,7 +190,7 @@ export function ProductTable({
                 />
               </th>
               {COLUMNS.filter((c) => c.key !== 'select').map((col) => {
-                const isMetric = col.key !== 'image' && col.key !== 'skcId' && col.key !== 'spuId' && col.key !== 'action';
+                const isMetric = col.key !== 'image' && col.key !== 'skcId' && col.key !== 'spuId';
                 const sortable = isMetric && SORTABLE_KEYS.includes(col.key as MetricKey);
                 const key = col.key as MetricKey;
                 const active = sort?.key === key;
@@ -200,7 +198,7 @@ export function ProductTable({
                   <th
                     key={String(col.key)}
                     className={`whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-gray-500 ${
-                      col.sticky === 'left' ? STICKY_LEFT : col.sticky === 'right' ? STICKY_RIGHT : ''
+                      col.sticky === 'left' ? STICKY_LEFT : ''
                     }`}
                   >
                     {sortable ? (
@@ -235,8 +233,12 @@ export function ProductTable({
               const checked = selected.has(p.skcId);
               return (
                 <Fragment key={p.skcId}>
-                  <tr className={`border-b border-gray-100 hover:bg-gray-50 ${checked ? 'bg-blue-50/40' : ''}`}>
-                    <td className={`${STICKY_LEFT} whitespace-nowrap px-2 py-1.5`}>
+                  <tr
+                    onClick={() => onToggleDetail(p.skcId)}
+                    title={isOpen ? '点击收起明细' : '点击展开明细'}
+                    className={`cursor-pointer border-b border-gray-100 hover:bg-gray-50 ${checked ? 'bg-blue-50/40' : ''}`}
+                  >
+                    <td className={`${STICKY_LEFT} whitespace-nowrap px-2 py-1.5`} onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
                         checked={checked}
@@ -244,7 +246,7 @@ export function ProductTable({
                         className="h-4 w-4 cursor-pointer"
                       />
                     </td>
-                    <td className={`${STICKY_LEFT} whitespace-nowrap px-3 py-1.5`}>
+                    <td className={`${STICKY_LEFT} whitespace-nowrap px-3 py-1.5`} onClick={(e) => e.stopPropagation()}>
                       <ZoomImage image={p.image} />
                     </td>
                     <td className={`${STICKY_LEFT} whitespace-nowrap px-3 py-1.5 font-medium tabular-nums text-gray-800`}>
@@ -270,6 +272,7 @@ export function ProductTable({
                     })}
                     <td
                       className="whitespace-nowrap px-2 py-1.5"
+                      onClick={(e) => e.stopPropagation()}
                       onMouseEnter={(e) => showNoteTip(e, notes[p.skcId] ?? '')}
                       onMouseLeave={() => setTip(null)}
                     >
@@ -281,19 +284,14 @@ export function ProductTable({
                         className="w-40 rounded border border-transparent bg-transparent px-1.5 py-1 text-sm text-gray-700 hover:border-gray-300 focus:border-blue-400 focus:bg-white focus:outline-none"
                       />
                     </td>
-                    <td className={`${STICKY_RIGHT} whitespace-nowrap px-3 py-1.5 text-right`}>
-                      <button
-                        type="button"
-                        onClick={() => onToggleDetail(p.skcId)}
-                        className={isOpen ? 'text-blue-500' : 'text-blue-600 hover:text-blue-800'}
-                      >
-                        {isOpen ? '收起' : '详情'}
-                      </button>
-                    </td>
                   </tr>
                   {isOpen && (
                     <tr className="bg-gray-50">
-                      <td colSpan={COLUMNS.length + 1} className="px-3 py-2">
+                      <td
+                        colSpan={COLUMNS.length}
+                        className="px-3 py-2"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <ProductDetail product={p} months={months} />
                       </td>
                     </tr>
@@ -303,7 +301,7 @@ export function ProductTable({
             })}
             {pageRows.length === 0 && (
               <tr>
-                <td colSpan={COLUMNS.length + 1} className="px-3 py-10 text-center text-sm text-gray-400">
+                <td colSpan={COLUMNS.length} className="px-3 py-10 text-center text-sm text-gray-400">
                   没有匹配的商品
                 </td>
               </tr>
