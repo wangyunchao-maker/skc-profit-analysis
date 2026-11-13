@@ -18,7 +18,9 @@ function toText(value: unknown): string | undefined {
 
 function toSkc(value: unknown): string {
   const s = toText(value);
-  return s ?? '';
+  // 导出文件的「合计」行 SKC ID 为 "-"，不属于真实 SKC，按空值跳过
+  if (!s || s === '-') return '';
+  return s;
 }
 
 function emptyRow(): RawProduct {
@@ -108,10 +110,10 @@ export async function parseExcel(file: File): Promise<ParsedExcel> {
   const empty: ParsedExcel = {
     fileName: file.name,
     hasSkcId: false,
+    isSkuLevel: false,
     presentFields: new Set(),
     rows: [],
     skuRows: [],
-    duplicateSkcs: [],
   };
   if (!sheet) return empty;
 
@@ -130,14 +132,12 @@ export async function parseExcel(file: File): Promise<ParsedExcel> {
 
   const presentFields = new Set<string>(headerToField.values());
   const hasSkcId = presentFields.has('skcId');
-  // 月度文件可能按 SKU 粒度导出（同一 SKC 对应多行），需要按 SKC 汇总
-  const skuLevel = presentFields.has('skuId') || presentFields.has('skuCode');
+  // 月度文件只接受 SKU 粒度导出（同一 SKC 对应多行），需按 SKC 合并
+  const isSkuLevel = presentFields.has('skuId') || presentFields.has('skuCode');
 
   const rows: RawProduct[] = [];
   /** SKU 粒度文件保留原始 SKU 行，供详情页展开查看 */
   const skuRows: RawProduct[] = [];
-  const duplicateSkcs: string[] = [];
-  const seen = new Set<string>();
   const bySkc = new Map<string, RawProduct>();
 
   const images = await extractEmbeddedImages(buffer);
@@ -156,13 +156,8 @@ export async function parseExcel(file: File): Promise<ParsedExcel> {
     const skc = rec.skcId;
     if (!skc) continue; // 跳过无 SKC 的行（如空行/合计行）
 
-    if (!skuLevel) {
-      // SKC 粒度文件：每个 SKC 一行，出现重复视为异常
-      if (seen.has(skc)) {
-        duplicateSkcs.push(skc);
-        continue;
-      }
-      seen.add(skc);
+    if (!isSkuLevel) {
+      // 非 SKU 粒度文件（月度文件不允许，由调用方拦截），按行保留以便识别表头问题
       rows.push(rec);
       continue;
     }
@@ -185,7 +180,7 @@ export async function parseExcel(file: File): Promise<ParsedExcel> {
   }
 
   // SKU 汇总后的比率字段需重算，避免把比率直接相加
-  if (skuLevel) {
+  if (isSkuLevel) {
     for (const merged of bySkc.values()) {
       merged.profitRate =
         merged.profit !== null && merged.principal !== null && merged.principal !== 0
@@ -202,5 +197,5 @@ export async function parseExcel(file: File): Promise<ParsedExcel> {
     row.refundRate = deriveRefundRate(row.consumerRefund, row.settlementAmount);
   }
 
-  return { fileName: file.name, hasSkcId, presentFields, rows, skuRows, duplicateSkcs };
+  return { fileName: file.name, hasSkcId, isSkuLevel, presentFields, rows, skuRows };
 }

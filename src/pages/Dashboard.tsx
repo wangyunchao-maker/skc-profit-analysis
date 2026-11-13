@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { BarChart3, FileUp, Loader2, Settings2, Sparkles } from 'lucide-react';
 import { Header } from '../components/Header';
-import { SummaryUploader } from '../components/upload/SummaryUploader';
 import { MonthlyUploader } from '../components/upload/MonthlyUploader';
 import { DetailUploader } from '../components/upload/DetailUploader';
 import { DetailView } from '../components/detail/DetailView';
@@ -57,9 +56,7 @@ export function Dashboard() {
 
   const [tab, setTab] = useState<Tab>('profit');
 
-  // ---------- 利润分析（汇总 + 月度） ----------
-  const [summaryName, setSummaryName] = useState<string | null>(null);
-
+  // ---------- 利润分析（仅月度文件） ----------
   const [monthlies, setMonthlies] = useState<UploadedMonthly[]>([]);
   const [status, setStatus] = useState<Status>('idle');
   const [loadingMsg, setLoadingMsg] = useState('');
@@ -77,9 +74,6 @@ export function Dashboard() {
   const [notesMessage, setNotesMessage] = useState('');
   const [sort, setSort] = useState<SortConfig | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-
-  // summary file 状态
-  const [summaryFile, setSummaryFile] = useState<File | null>(null);
 
   // ---------- 售后退款明细（多维度明细导出） ----------
   const [detailFile, setDetailFile] = useState<File | null>(null);
@@ -124,18 +118,6 @@ export function Dashboard() {
     setExpanded(new Set());
   };
 
-  const onSummaryUpload = (file: File) => {
-    setSummaryFile(file);
-    setSummaryName(file.name);
-    resetAnalysis();
-  };
-
-  const onSummaryRemove = () => {
-    setSummaryFile(null);
-    setSummaryName(null);
-    resetAnalysis();
-  };
-
   const onMonthlyAdd = (files: FileList | null) => {
     if (!files) return;
     const additions: UploadedMonthly[] = Array.from(files).map((file) => ({
@@ -162,15 +144,15 @@ export function Dashboard() {
   const allMonthsSet = monthlies.length > 0 && monthlies.every((f) => f.month !== null);
   const monthset = new Set(monthlies.map((f) => f.month).filter(Boolean) as string[]);
   const noDuplicateMonths = monthset.size === monthlies.length;
-  const canAnalyze = summaryFile !== null && allMonthsSet && noDuplicateMonths;
+  const canAnalyze = monthlies.length > 0 && allMonthsSet && noDuplicateMonths;
 
   const handleAnalyze = async () => {
-    if (!summaryFile) return;
+    if (monthlies.length === 0) return;
     setStatus('loading');
     setLoadingMsg('正在读取 Excel...');
     try {
-      const result = await analyze({ file: summaryFile }, monthlies);
-      setLoadingMsg('正在匹配 SKC...');
+      const result = await analyze(monthlies);
+      setLoadingMsg('正在按 SKC 汇总...');
       // 让 UI 刷新加载文案
       await new Promise((r) => setTimeout(r, 30));
       setProducts(result.products);
@@ -482,15 +464,14 @@ export function Dashboard() {
         {/* 上传区域 */}
         {(status === 'idle' || status === 'ready') && (
           <div className="rounded-lg border border-gray-200 bg-white">
-            <div className="grid grid-cols-1 gap-4 p-4 lg:grid-cols-2">
-              <SummaryUploader fileName={summaryName} onUpload={onSummaryUpload} onRemove={onSummaryRemove} />
+            <div className="p-4">
               <MonthlyUploader files={monthlies} onAdd={onMonthlyAdd} onRemove={onMonthlyRemove} onChangeMonth={onChangeMonth} />
             </div>
 
             {status === 'idle' && (
               <div className="border-t border-gray-100 px-4 py-3">
                 <div className="text-xs text-gray-500">
-                  所有 Excel 数据均在当前浏览器本地解析，不会上传服务器。
+                  月度文件需按 SKU 维度导出（含 SKC ID、SKU ID / SKU货号）。所有 Excel 数据均在当前浏览器本地解析，不会上传服务器。
                   {!allMonthsSet && monthlies.length > 0 && ' · 请为尚未设置月份的文件选择月份。'}
                   {allMonthsSet && !noDuplicateMonths && ' · 存在重复月份，请修改或删除。'}
                 </div>
@@ -564,11 +545,11 @@ export function Dashboard() {
         )}
 
         {/* 空状态（未上传任何文件） */}
-        {status === 'idle' && !summaryFile && monthlies.length === 0 && (
+        {status === 'idle' && monthlies.length === 0 && (
           <div className="rounded-lg border border-dashed border-gray-300 bg-white py-16 text-center">
             <FileUp className="mx-auto h-8 w-8 text-gray-300" />
-            <p className="mt-3 text-gray-500">上传汇总文件和月度文件开始分析</p>
-            <p className="mt-1 text-xs text-gray-400">数据仅在本浏览器本地处理，不会上传服务器</p>
+            <p className="mt-3 text-gray-500">上传月度 SKU 文件开始分析</p>
+            <p className="mt-1 text-xs text-gray-400">SKC 汇总指标由已上传月份自动累加，数据仅在本浏览器本地处理</p>
           </div>
         )}
           </>

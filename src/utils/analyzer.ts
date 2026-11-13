@@ -1,5 +1,6 @@
 /**
- * 分析流程编排：读取 Excel -> 校验月份 -> 匹配 SKC -> 生成结果。
+ * 分析流程编排：读取月度 SKU 文件 -> 校验月份 -> 按 SKC 汇总 -> 生成结果。
+ * 不再需要汇总文件，汇总指标由各月 SKU 明细累加得出。
  */
 import type { AnalysisInfo, ParsedMonthlyFile } from '../types/excel';
 import type { ProductAnalysis } from '../types/product';
@@ -7,10 +8,6 @@ import type { ValidationIssue } from '../types/validation';
 import { parseExcel } from './excelParser';
 import { parseMonthFromFilename } from './monthParser';
 import { buildAnalysis } from './productMatcher';
-
-export interface UploadedSummary {
-  file: File;
-}
 
 export interface UploadedMonthly {
   id: string;
@@ -31,17 +28,8 @@ export function detectMonthFromFile(fileName: string): string | null {
 }
 
 /** 月份预校验：返回错误级别 issues（重复月份 / 未设置月份） */
-export function validateMonths(summary: UploadedSummary | null, monthlies: UploadedMonthly[]): ValidationIssue[] {
+export function validateMonths(monthlies: UploadedMonthly[]): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
-
-  if (summary === null) {
-    issues.push({
-      type: 'no-summary',
-      level: 'error',
-      message: '尚未上传汇总文件。',
-    });
-  }
-
   const seen = new Map<string, string>(); // month -> fileName
   for (const mf of monthlies) {
     if (!mf.month) {
@@ -81,21 +69,10 @@ export function hasDuplicateMonths(monthlies: Array<{ month: string | null }>): 
 }
 
 /** 完整分析流程（在点击「开始分析」时调用一次） */
-export async function analyze(summary: UploadedSummary, monthlies: UploadedMonthly[]): Promise<AnalyzeResult> {
+export async function analyze(monthlies: UploadedMonthly[]): Promise<AnalyzeResult> {
   const preIssues: ValidationIssue[] = [];
 
-  // 1. 读取汇总文件
-  const summaryParsed = await parseExcel(summary.file);
-  if (!summaryParsed.hasSkcId) {
-    preIssues.push({
-      type: 'missing-skc',
-      level: 'error',
-      fileName: summaryParsed.fileName,
-      message: `汇总文件无法使用：没有找到 SKC ID 字段。`,
-    });
-  }
-
-  // 2. 读取各月度文件
+  // 读取各月度文件：必须是带 SKC ID 的 SKU 维度导出
   const monthliesParsed: ParsedMonthlyFile[] = [];
   for (const mf of monthlies) {
     if (!mf.month) continue;
@@ -105,22 +82,21 @@ export async function analyze(summary: UploadedSummary, monthlies: UploadedMonth
         type: 'missing-skc',
         level: 'error',
         fileName: parsed.fileName,
-        message: `月度文件无法使用：没有找到 SKC ID 字段（${parsed.fileName}）。`,
+        message: `月度文件无法使用：没有找到 SKC ID 字段，无法把 SKU 明细归并到 SKC（${parsed.fileName}）。`,
       });
       continue;
     }
-    for (const skc of parsed.duplicateSkcs) {
+    if (!parsed.isSkuLevel) {
       preIssues.push({
-        type: 'duplicate-skc',
-        level: 'warning',
+        type: 'missing-field',
+        level: 'error',
         fileName: parsed.fileName,
-        skcId: skc,
-        message: `「${parsed.fileName}」内存在重复 SKC：${skc}`,
+        message: `月度文件必须按 SKU 维度导出：未找到「SKU ID」或「SKU货号」字段，无法按 SKC 合并计算（${parsed.fileName}）。`,
       });
+      continue;
     }
     monthliesParsed.push({ month: mf.month, parsed });
   }
 
-  // 3. 匹配并生成结果
-  return buildAnalysis(summaryParsed, monthliesParsed, preIssues);
+  return buildAnalysis(monthliesParsed, preIssues);
 }
